@@ -1,0 +1,56 @@
+{
+  "background_color": "#12b82e",
+  "description": "Free, private QR code generator. Runs entirely in your browser. No redirect links, no accounts, nothing stored.",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "qr.ente",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "qr.ente",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "https://qr.ente.com/favicon.svg",
+      "type": "image/svg+xml",
+      "isSquare": false,
+      "isPng": false,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 0,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
+    },
+    {
+      "src": "https://qr.ente.com/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "isSquare": true,
+      "isPng": true,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 180,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
+    },
+    {
+      "src": "https://qr.ente.com/og-ente-qr.png",
+      "type": "image/png",
+      "sizes": "1440x810",
+      "isSquare": false,
+      "isPng": true,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 1440,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
+    }
+  ],
+  "id": "qr.ente.1",
+  "categories": [
+    "utilities"
+  ]
+}
