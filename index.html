@@ -920,6 +920,21 @@
   }
   .range-row output { font-family: var(--mono); font-size: 12px; color: var(--text-2); width: 28px; text-align: right; }
 
+  /* error correction levels */
+  .ectile {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 46px;
+    max-width: 76px;
+    height: 48px;
+    grid-auto-rows: min-content;
+    align-content: center;
+    gap: 3px;
+  }
+  .ectile b { font-size: 15px; font-weight: 700; line-height: 1; color: var(--text); }
+  .ectile small { font-family: var(--mono); font-size: 10px; line-height: 1; color: var(--text-2); }
+  .ecnote { font-size: 12px; line-height: 1.45; color: var(--text-2); margin: -4px 0 0; }
+
   /* ---------- footer ---------- */
   footer {
     border-top: 1px solid var(--hairline);
@@ -1130,6 +1145,17 @@
           <input type="checkbox" id="logoGap" checked>
           Clear space behind logo
         </label>
+          </div>
+        </details>
+      </div>
+
+      <div class="card">
+        <details class="adv">
+          <summary>Advanced</summary>
+          <div class="advbody">
+            <p class="rowlabel">Error correction</p>
+            <div class="tiles" id="ecTiles" role="radiogroup" aria-label="Error correction level"></div>
+            <p class="ecnote" id="ecNote"></p>
           </div>
         </details>
       </div>
@@ -2096,6 +2122,7 @@
         $("logoBtn").textContent = "Replace logo";
         /* a logo hides modules: High error correction keeps it scannable */
         state.ec = "H";
+        $("ecTiles")._sync("H");
         render(true, true);
       };
       probe.onerror = function () {
@@ -2144,6 +2171,46 @@
     bakeLogo();
     render(true, true);
   });
+
+  /* ---------- error correction: how much of the code can be lost and still scan ---------- */
+  var EC_LEVELS = [
+    ["L", "Low",      "7%",  "Smallest code. Fine for screens and clean prints."],
+    ["M", "Medium",   "15%", "A good default for links without a logo."],
+    ["Q", "Quartile", "25%", "Survives smudges, folds and small logos."],
+    ["H", "High",     "30%", "Densest code. Best with a logo or rough surfaces."]
+  ];
+  (function () {
+    var host = $("ecTiles"), note = $("ecNote"), btns = [];
+    EC_LEVELS.forEach(function (opt) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "gtile ectile";
+      btn.title = opt[1] + " (recovers up to " + opt[2] + ")";
+      btn.setAttribute("role", "radio");
+      btn.setAttribute("aria-label", opt[1] + " error correction, recovers up to " + opt[2]);
+      var letter = document.createElement("b");
+      letter.textContent = opt[0];
+      var pct = document.createElement("small");
+      pct.textContent = opt[2];
+      btn.appendChild(letter);
+      btn.appendChild(pct);
+      btn.addEventListener("click", function () {
+        state.ec = opt[0];
+        host._sync(opt[0]);
+        render(true, true);
+      });
+      host.appendChild(btn);
+      btns.push(btn);
+    });
+    host._sync = function (value) {
+      var idx = -1;
+      EC_LEVELS.forEach(function (opt, i) { if (opt[0] === value) idx = i; });
+      setChecked(btns, idx);
+      note.textContent = idx >= 0 ? EC_LEVELS[idx][3] : "";
+    };
+    host._sync(state.ec);
+    radioKeys(host);
+  })();
 
   /* ---------- morphing icon: three lines, any shape to any shape ---------- */
   var MI = {

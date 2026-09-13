@@ -12,6 +12,7 @@ Most free QR tools put *their* link inside your code and redirect through their 
 - Colours for the code, the eyes and the background, plus a colour picker
 - Your logo in the middle, with shape, size, padding and a white backing plate
 - Frames with your own label, baked into every export
+- Four error correction levels (L, M, Q, H), raised to High automatically when you add a logo
 - PNG and SVG export from 512 to 2048 px, or copy straight to the clipboard
 - A share card that turns the code into a story-sized image
 
