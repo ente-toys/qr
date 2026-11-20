@@ -184,20 +184,15 @@
     width: 100%;
     border: none;
     border-radius: 24px;
-    background: #fff;
+    background: transparent;
     color: var(--text);
     font-family: var(--sans);
     font-size: 18px;
     padding: 25px 92px 25px 26px;
-    box-shadow: 0 14px 44px -14px rgba(0, 0, 0, 0.3);
-    transition: box-shadow 180ms ease;
   }
   #data::placeholder { color: var(--text-2); }
-  #data:focus {
-    outline: none;
-    box-shadow: 0 14px 44px -14px rgba(0, 0, 0, 0.3), 0 0 0 4px rgba(255, 255, 255, 0.45);
-  }
-  .hs-form button {
+  #data:focus { outline: none; }
+  .hs-form .hs-go {
     position: absolute;
     right: 10px;
     top: 10px;
@@ -212,14 +207,130 @@
     place-items: center;
     transition: transform 120ms var(--ease-out), background 150ms ease;
   }
-  .hs-form button:active { transform: scale(0.94); }
+  .hs-form .hs-go:active { transform: scale(0.94); }
   @media (hover: hover) and (pointer: fine) {
-    .hs-form button:hover { background: #000; }
+    .hs-form .hs-go:hover { background: #000; }
   }
-  .hs-form.shake { animation: shake 320ms ease; }
   @keyframes shake {
     20%, 60% { transform: translateX(-6px); }
     40%, 80% { transform: translateX(6px); }
+  }
+
+  /* what goes in the QR code: a link or any text, an email, or a contact card */
+  .qt [hidden] { display: none !important; }
+  /* the type picker lives inside the box: [Link v] [paste here] [->] */
+  .hl { position: relative; z-index: 5; } /* its menu opens over the floating art on phones */
+  /* one white surface for every type: switching grows or shrinks this box instead of swapping cards */
+  .qt {
+    position: relative; max-width: 560px; margin-top: 50px; border-radius: 24px;
+    background: #fff; box-shadow: 0 14px 44px -14px rgba(0, 0, 0, 0.3); transition: box-shadow 180ms ease;
+  }
+  .qt:has(#data:focus) { box-shadow: 0 14px 44px -14px rgba(0, 0, 0, 0.3), 0 0 0 4px rgba(255, 255, 255, 0.45); }
+  .qt.morphing { overflow: hidden; transition: height 260ms var(--ease-out), box-shadow 180ms ease; }
+  .qt.shake { animation: shake 320ms ease; }
+  .qt-msg { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
+  .qt .hs-form { margin-top: 0; }
+  .qt #data { padding-left: 124px; }
+  .qt-card { position: relative; display: grid; gap: 8px; padding: 10px; text-align: left; }
+  .qt-row { display: flex; gap: 8px; }
+  .qt-row input { flex: 1; min-width: 0; }
+  .kind-slot { display: contents; }
+  /* green tint, not grey: beside the grey fields it has to read as a control, not one more field */
+  .kind {
+    flex: none; display: flex; align-items: center; gap: 7px; padding: 0 13px 0 14px;
+    border: 0; border-radius: 16px; background: var(--green-tint); color: var(--text); cursor: pointer;
+    font: 600 15px/1 var(--sans); white-space: nowrap;
+    transition: background 150ms ease, transform 120ms var(--ease-out);
+  }
+  .qt-row .kind { border-radius: 14px; } /* same corners as the fields it sits beside */
+  .hs-form .kind { position: absolute; left: 10px; top: 10px; bottom: 10px; z-index: 2; }
+  .kind:active { transform: scale(0.97); }
+  .kind:focus-visible { outline: 2px solid var(--green-deep); outline-offset: 2px; }
+  .kind-ic { display: grid; color: var(--green-deep); }
+  .kind-ic svg *, .kind-chev *, .kind-opt svg * { stroke-width: 1.8; }
+  .kind-chev { margin: 0 -3px 0 -2px; color: var(--green-deep); opacity: 0.7; transition: transform 200ms var(--ease-out); }
+  .kind[aria-expanded="true"] { background: rgba(0, 179, 60, 0.2); }
+  .kind[aria-expanded="true"] .kind-chev { transform: rotate(180deg); }
+  @media (hover: hover) and (pointer: fine) {
+    .kind:hover { background: rgba(0, 179, 60, 0.2); }
+  }
+  .kind-menu {
+    position: absolute; z-index: 40; width: 288px; max-width: calc(100% - 20px); padding: 6px;
+    border-radius: 18px; background: #fff; text-align: left;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.08), 0 16px 48px -8px rgba(0, 0, 0, 0.32);
+    transform-origin: 24px 0; animation: kindIn 200ms var(--ease-out);
+  }
+  /* no room below (short laptop screens): it opens upward, growing from the picker again */
+  .kind-menu.up { transform-origin: 24px 100%; }
+  /* leaving is quicker than arriving */
+  .kind-menu.closing { animation: kindOut 120ms var(--ease-out) forwards; pointer-events: none; }
+  @keyframes kindIn { from { opacity: 0; transform: scale(0.96); } }
+  @keyframes kindOut { to { opacity: 0; transform: scale(0.97); } }
+  .kind-opt {
+    display: grid; grid-template-columns: 22px 1fr 18px; gap: 10px; align-items: center;
+    min-height: 56px; padding: 9px 12px; border-radius: 12px; cursor: pointer;
+    transition: background 120ms ease;
+  }
+  .kind-opt svg { justify-self: center; color: var(--text-2); }
+  .kind-opt.active { background: #F0F2EF; }
+  .kind-opt:active { background: #E7EAE5; }
+  /* the chosen type keeps a green icon and a tick; the grey highlight is free to follow the pointer or the arrow keys */
+  .kind-opt[aria-selected="true"] svg { color: var(--green-deep); }
+  .kind-opt[aria-selected="true"]::after {
+    content: ""; width: 18px; height: 18px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23009B34' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 14L8.5 17.5L19 6.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  .kind-opt b { display: block; font: 600 15px/1.2 var(--sans); color: var(--text); }
+  .kind-opt span { display: block; margin-top: 2px; font-size: 13px; line-height: 1.3; color: var(--text-2); }
+  /* phones: one row, the same box as desktop. The picker shrinks to its icon so the hint keeps its room;
+     the name stays readable to screen readers, and the menu still spells every type out */
+  @media (max-width: 480px) {
+    .kind { gap: 3px; padding: 0 8px 0 12px; }
+    .kind-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .qt #data, .qt #data:focus { padding: 24px 70px 24px 80px; font-size: 17px; }
+    .hs-form .hs-go { width: 52px; border-radius: 16px; }
+  }
+  .qt-card input, .qt-card textarea {
+    width: 100%; border: 0; border-radius: 14px; background: #F3F5F2; color: var(--text);
+    font: 500 17px/1.3 var(--sans); padding: 15px 16px;
+    transition: box-shadow 150ms ease, background 150ms ease;
+  }
+  .qt-card textarea { display: block; height: 88px; resize: none; }
+  .qt-card input::placeholder, .qt-card textarea::placeholder { color: var(--text-2); }
+  .qt-card input:focus, .qt-card textarea:focus { outline: none; background: #fff; box-shadow: inset 0 0 0 2px var(--green-deep); }
+  /* a form that has just been picked shows its fields one after another; so do the two extra contact fields */
+  .qt-card > input, .qt-card > textarea, .qt-card > button, .qt-row input { animation: fieldIn 200ms var(--ease-out) backwards; }
+  .qt-card > :nth-child(2) { animation-delay: 15ms; }
+  .qt-card > :nth-child(3) { animation-delay: 30ms; }
+  .qt-card > :nth-child(n+4) { animation-delay: 45ms; }
+  .qt-card > #ctOrg { animation-delay: 0ms; }
+  .qt-card > #ctUrl { animation-delay: 25ms; }
+  @keyframes fieldIn { from { opacity: 0; transform: translateY(6px); } }
+  @media (prefers-reduced-motion: reduce) {
+    .kind-menu, .kind-menu.closing { animation: none; }
+    .qt.shake { animation: none; }
+    .kind, .kind-chev, .qt-go, .qt-more, .hs-form .hs-go { transition: none; }
+    .kind:active, .qt-go:active, .hs-form .hs-go:active { transform: none; }
+    .qt-card > input, .qt-card > textarea, .qt-card > button, .qt-row input { animation: none; }
+  }
+  .qt-more {
+    justify-self: center; min-height: 44px; border: 0; border-radius: 12px; background: none; cursor: pointer;
+    color: #007A2E; font: 600 15px/1 var(--sans); padding: 8px 14px;
+    transition: background 150ms ease;
+  }
+  .qt-more:active { background: var(--green-tint); }
+  .qt-go {
+    height: 56px; border: 0; border-radius: 16px; background: #111; color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px; font: 600 17px/1 var(--sans);
+    transition: transform 120ms var(--ease-out), background 150ms ease;
+  }
+  .qt-go:active { transform: scale(0.98); }
+  .qt-go:focus-visible, .hs-form .hs-go:focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
+  @media (hover: hover) and (pointer: fine) {
+    .qt-more:hover { background: var(--green-tint); }
+    .qt-go:hover { background: #000; }
+    .qt-go svg { transition: transform 180ms var(--ease-out); }
+    .qt-go:hover svg { transform: translateX(3px); }
   }
 
   .art { --cardw: min(374px, 75%); position: relative; height: 470px; }
@@ -350,8 +461,8 @@
     .chip.track:hover { transform: rotate(1deg) translateY(-5px) scale(1.05); }
     .chip.signup:hover { transform: rotate(-1deg) translateY(-5px) scale(1.05); }
     .scrib2:hover { transform: rotate(0deg) scale(1.05); }
-    .hs-form button svg { transition: transform 180ms var(--ease-out); }
-    .hs-form button:hover svg { transform: translateX(3px); }
+    .hs-form .hs-go svg { transition: transform 180ms var(--ease-out); }
+    .hs-form .hs-go:hover svg { transform: translateX(3px); }
   }
   @media (hover: hover) and (pointer: fine) {
     .artcard { transition: box-shadow 260ms var(--ease-out); will-change: transform; }
@@ -552,6 +663,8 @@
     .hs-grid { grid-template-columns: 1fr; padding-top: 40px; padding-bottom: 80px; gap: 12px; }
     .hl { text-align: center; }
     .hs-form { margin: 42px auto 0; }
+    .qt { margin: 42px auto 0; }
+    .qt .hs-form { margin: 0; }
     .art { --cardw: min(320px, 80vw); height: 460px; margin-top: 32px; }
     .artcard { --rz: 4deg; }
     .chip { font-size: 18px; padding: 8px 14px; }
@@ -662,6 +775,74 @@
     cursor: pointer;
   }
   .hint { font-family: var(--hand); font-size: 15px; color: var(--text-2); margin: 0; }
+
+  /* ---------- complexity: more dots, more damage the QR code survives ---------- */
+  .protect { position: relative; }
+  .protect-head { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; }
+  .card .protect-head h2 { margin: 0; }
+  .info-btn {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--seg-track);
+    color: var(--text-2);
+    font: 700 12px/20px var(--sans);
+    text-align: center;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease, transform 120ms var(--ease-out);
+  }
+  .info-btn::after { content: ""; position: absolute; inset: -12px; }
+  .info-btn:active { transform: scale(0.92); }
+  .info-btn[aria-expanded="true"] { background: var(--green-tint); color: var(--green-deep); }
+  @media (hover: hover) and (pointer: fine) {
+    .info-btn:hover { color: var(--green-deep); }
+  }
+  .protect .range-row input[type="range"] { width: 100%; }
+  .protect-stops { display: flex; justify-content: space-between; margin-top: 8px; }
+  .protect-stops button {
+    border: 0;
+    background: none;
+    padding: 4px 0;
+    cursor: pointer;
+    font: 500 13px/1 var(--sans);
+    color: var(--text-2);
+    transition: color 150ms ease;
+  }
+  .protect-stops button.on { color: var(--text); font-weight: 600; }
+  .protect-stops button { position: relative; }
+  .protect-stops button::after { content: ""; position: absolute; inset: -12px -8px; }
+  .protect.locked .range-row, .protect.locked .protect-stops { opacity: 0.4; pointer-events: none; }
+  .protect-note { margin: 10px 0 0; font-size: 13px; color: var(--text-2); }
+  .protect-tip {
+    position: absolute;
+    z-index: 40;
+    top: 48px;
+    left: 14px;
+    width: min(300px, calc(100% - 28px));
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--card);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 16px 48px -8px rgba(0, 0, 0, 0.28);
+    text-align: left;
+    transform-origin: 96px 0;
+    transform: scale(0.96);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease, transform 120ms ease, visibility 0s linear 120ms;
+  }
+  .protect-tip.open {
+    transform: scale(1);
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 160ms var(--ease-out), transform 200ms var(--ease-out), visibility 0s;
+  }
+  .protect-tip p { margin: 0 0 10px; font-size: 14px; line-height: 1.4; color: var(--text); }
+  .protect-tip dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 13px; line-height: 1.35; }
+  .protect-tip dt { font-weight: 600; color: var(--text); }
+  .protect-tip dd { margin: 0; color: var(--text-2); }
 
   /* ---------- controls ---------- */
   .controls { display: flex; flex-direction: column; gap: 18px; }
@@ -971,16 +1152,41 @@
         <span class="l1">QR codes</span>
         <span class="l2">in seconds.</span>
       </h1>
+      <div class="qt">
+      <!-- icons from Hugeicons free (MIT) -->
+      <p class="qt-msg" id="qtMsg" role="alert"></p>
+      <div class="kind-menu" id="kindMenu" role="listbox" aria-label="QR code type" hidden>
+        <div class="kind-opt" role="option" id="kindText" data-mode="text" aria-selected="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 13.229C10.1416 13.4609 10.3097 13.6804 10.5042 13.8828C11.7117 15.1395 13.5522 15.336 14.9576 14.4722C15.218 14.3121 15.4634 14.1157 15.6872 13.8828L18.9266 10.5114C20.3578 9.02184 20.3578 6.60676 18.9266 5.11718C17.4953 3.6276 15.1748 3.62761 13.7435 5.11718L13.03 5.85978" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"/><path d="M10.9703 18.14L10.2565 18.8828C8.82526 20.3724 6.50471 20.3724 5.07345 18.8828C3.64218 17.3932 3.64218 14.9782 5.07345 13.4886L8.31287 10.1172C9.74413 8.62761 12.0647 8.6276 13.4959 10.1172C13.6904 10.3195 13.8584 10.539 14 10.7708" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"/></svg><div><b>Link or text</b><span>A website, a note, anything</span></div></div>
+        <div class="kind-opt" role="option" id="kindEmail" data-mode="email" aria-selected="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 6L8.91302 9.91697C11.4616 11.361 12.5384 11.361 15.087 9.91697L22 6" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5"/><path d="M2.01577 13.4756C2.08114 16.5412 2.11383 18.0739 3.24496 19.2094C4.37608 20.3448 5.95033 20.3843 9.09883 20.4634C11.0393 20.5122 12.9607 20.5122 14.9012 20.4634C18.0497 20.3843 19.6239 20.3448 20.7551 19.2094C21.8862 18.0739 21.9189 16.5412 21.9842 13.4756C22.0053 12.4899 22.0053 11.5101 21.9842 10.5244C21.9189 7.45886 21.8862 5.92609 20.7551 4.79066C19.6239 3.65523 18.0497 3.61568 14.9012 3.53657C12.9607 3.48781 11.0393 3.48781 9.09882 3.53656C5.95033 3.61566 4.37608 3.65521 3.24495 4.79065C2.11382 5.92608 2.08114 7.45885 2.01576 10.5244C1.99474 11.5101 1.99475 12.4899 2.01577 13.4756Z" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5"/></svg><div><b>Email</b><span>Opens a new email to you</span></div></div>
+        <div class="kind-opt" role="option" id="kindContact" data-mode="contact" aria-selected="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="2" width="17.5" height="20" rx="4" stroke="currentColor" stroke-width="1.5"/><path d="M10.59 13.7408C9.96125 14.162 8.31261 15.0221 9.31674 16.0983C9.80725 16.624 10.3536 17 11.0404 17H14.9596C15.6464 17 16.1928 16.624 16.6833 16.0983C17.6874 15.0221 16.0388 14.162 15.41 13.7408C13.9355 12.7531 12.0645 12.7531 10.59 13.7408Z" stroke="currentColor" stroke-width="1.5"/><path d="M15 9C15 10.1046 14.1046 11 13 11C11.8954 11 11 10.1046 11 9C11 7.89543 11.8954 7 13 7C14.1046 7 15 7.89543 15 9Z" stroke="currentColor" stroke-width="1.5"/><path d="M5 6L2.5 6M5 12L2.5 12M5 18H2.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg><div><b>Contact</b><span>Adds you to their phone</span></div></div>
+      </div>
       <form class="hs-form" id="heroForm">
         <label for="data" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Link or text</label>
+        <span class="kind-slot"><button type="button" class="kind" id="kindBtn" role="combobox" aria-label="QR code type" aria-haspopup="listbox" aria-expanded="false" aria-controls="kindMenu"><span class="kind-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 13.229C10.1416 13.4609 10.3097 13.6804 10.5042 13.8828C11.7117 15.1395 13.5522 15.336 14.9576 14.4722C15.218 14.3121 15.4634 14.1157 15.6872 13.8828L18.9266 10.5114C20.3578 9.02184 20.3578 6.60676 18.9266 5.11718C17.4953 3.6276 15.1748 3.62761 13.7435 5.11718L13.03 5.85978" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"/><path d="M10.9703 18.14L10.2565 18.8828C8.82526 20.3724 6.50471 20.3724 5.07345 18.8828C3.64218 17.3932 3.64218 14.9782 5.07345 13.4886L8.31287 10.1172C9.74413 8.62761 12.0647 8.6276 13.4959 10.1172C13.6904 10.3195 13.8584 10.539 14 10.7708" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"/></svg></span><span class="kind-lbl">Link</span><svg class="kind-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg></button></span>
         <input id="data" type="text" value="" spellcheck="false" autocomplete="off"
-               placeholder="Paste or type your link">
-        <button type="submit" aria-label="Generate QR code">
+               placeholder="Paste a link or any text">
+        <button class="hs-go" type="submit" aria-label="Make QR code">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3.5 10 H16"/><path d="M10.5 4.5 L16 10 L10.5 15.5"/>
           </svg>
         </button>
       </form>
+      <form class="qt-card" id="emailForm" novalidate hidden>
+        <div class="qt-row"><span class="kind-slot"></span><input id="emTo" type="email" placeholder="Email address" aria-label="Email address" autocomplete="email" spellcheck="false"></div>
+        <input id="emSub" type="text" placeholder="Subject" aria-label="Subject" autocomplete="off">
+        <textarea id="emBody" placeholder="Message" aria-label="Message"></textarea>
+        <button class="qt-go" type="submit">Make QR code <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10 H16"/><path d="M10.5 4.5 L16 10 L10.5 15.5"/></svg></button>
+      </form>
+      <form class="qt-card" id="contactForm" novalidate hidden>
+        <div class="qt-row"><span class="kind-slot"></span><input id="ctName" type="text" placeholder="Name" aria-label="Name" autocomplete="name"></div>
+        <input id="ctTel" type="tel" placeholder="+00 000 000 0000" aria-label="Phone, with country code" autocomplete="tel">
+        <input id="ctMail" type="email" placeholder="Email" aria-label="Email" autocomplete="email" spellcheck="false">
+        <button class="qt-more" id="ctMore" type="button" aria-expanded="false" aria-controls="ctOrg ctUrl">+ Company and website</button>
+        <input id="ctOrg" type="text" placeholder="Company" aria-label="Company" autocomplete="organization" hidden>
+        <input id="ctUrl" type="url" placeholder="Website" aria-label="Website" autocomplete="url" spellcheck="false" hidden>
+        <button class="qt-go" type="submit">Make QR code <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10 H16"/><path d="M10.5 4.5 L16 10 L10.5 15.5"/></svg></button>
+      </form>
+      </div>
     </div>
     <div class="art rise d2" aria-hidden="true">
       <div class="floaty"><div class="artcard"><div id="heroQR"></div><div class="sheen"></div></div></div>
@@ -1073,6 +1279,30 @@
         <div class="tiles" id="eyeTiles" role="radiogroup" aria-label="Corner eye shape"></div>
       </div>
 
+      <div class="card protect" id="protect">
+        <div class="protect-head">
+          <h2 id="protectName">Complexity</h2>
+          <button class="info-btn" id="protectInfo" type="button" aria-expanded="false" aria-controls="protectTip" aria-label="What is complexity?">i</button>
+        </div>
+        <div class="range-row">
+          <input type="range" id="protectRange" min="0" max="2" step="1" value="0" aria-labelledby="protectName" aria-valuetext="Good">
+        </div>
+        <div class="protect-stops" aria-hidden="true">
+          <button type="button" tabindex="-1" data-stop="0" class="on">Good</button>
+          <button type="button" tabindex="-1" data-stop="1">Strong</button>
+          <button type="button" tabindex="-1" data-stop="2">Strongest</button>
+        </div>
+        <p class="protect-note" id="protectNote" hidden>A logo needs Strongest.</p>
+        <div class="protect-tip" id="protectTip" role="note">
+          <p>Complexity is how many dots your QR code uses. More dots keep it scanning when part of it gets scratched, dirty or covered.</p>
+          <dl>
+            <dt>Good</dt><dd>Screens and most prints</dd>
+            <dt>Strong</dt><dd>Stickers, posters and outdoors</dd>
+            <dt>Strongest</dt><dd>Needed when you add a logo</dd>
+          </dl>
+        </div>
+      </div>
+
       <div class="card">
         <h2>Colors</h2>
         <p class="rowlabel">Code</p>
@@ -1146,7 +1376,7 @@
 <input type="color" id="cCorner" value="#00B33C" hidden>
 <input type="color" id="cBg" value="#FFFFFF" hidden>
 
-<script src="assets/vendor/qr-code-styling.js"></script>
+<script src="assets/vendor/qr-code-styling.js?v=2"></script>
 <script>
 (function () {
   "use strict";
@@ -1171,7 +1401,7 @@
     logoGap: true,
     frame: "none",
     frameLabel: "SCAN ME",
-    ec: "Q",
+    ec: "M",
     margin: 8
   };
 
@@ -1193,7 +1423,7 @@
     ["classy", "Classy", "0 6px 6px 6px"]
   ];
   var FRAME_TYPES = [["square", "Square", "0"], ["extra-rounded", "Rounded", "7px"], ["dot", "Dot", "50%"]];
-  var EYE_TYPES = [["square", "Square", "0"], ["dot", "Dot", "50%"]];
+  var EYE_TYPES = [["square", "Square", "0"], ["extra-rounded", "Rounded", "3.5px"], ["dot", "Dot", "50%"]];
 
   var SWATCHES = {
     Dots:   ["#171B19", "#000000", "#0B3D2E", "#1E3A8A", "#7C2D12", "#EAF5EC"],
@@ -1563,7 +1793,9 @@
     clearTimeout(renderTimer);
     renderTimer = setTimeout(function () {
       if (!state.data.trim()) {
-        mount.innerHTML = '<p class="empty">Paste a link above to generate your code.</p>';
+        mount.innerHTML = kindMode === "text"
+          ? '<p class="empty">Add a link or any text above to make your QR code.</p>'
+          : '<p class="empty">Fill in the details above to make your QR code.</p>';
         return;
       }
       /* full re-instantiation every render: no deep-merge ghosts from update() */
@@ -1573,7 +1805,9 @@
         qr.append(temp);
       } catch {
         /* code length overflow: too many bytes for one QR */
-        mount.innerHTML = '<p class="empty">Too much text for one QR code. Shorten it, or lower the error correction in Advanced.</p>';
+        mount.innerHTML = state.ec === "M" || state.logo
+          ? '<p class="empty">Too much text for one QR code. Shorten it.</p>'
+          : '<p class="empty">Too much text for one QR code. Shorten it, or set Complexity to Good.</p>';
         return;
       }
       var qrSvg = temp.querySelector("svg");
@@ -2027,6 +2261,7 @@
 
   /* ---------- data ---------- */
   $("data").addEventListener("input", function () {
+    clearProblem();
     state.data = this.value;
     if (revealed) { render(); }
   });
@@ -2094,8 +2329,8 @@
         $("logoOpts").hidden = false;
         $("logoGapRow").hidden = false;
         $("logoBtn").textContent = "Replace logo";
-        /* a logo hides modules: High error correction keeps it scannable */
-        state.ec = "H";
+        /* a logo hides modules: Strongest keeps it scannable */
+        lockProtect(true);
         render(true, true);
       };
       probe.onerror = function () {
@@ -2118,6 +2353,7 @@
     $("logoOpts").hidden = true;
     $("logoGapRow").hidden = true;
     $("logoBtn").textContent = "Add logo";
+    lockProtect(false);
     render(true, true);
   });
   $("logoGap").addEventListener("change", function () {
@@ -2342,6 +2578,60 @@
   document.querySelectorAll('input[type="range"]').forEach(function (r) {
     paintRange(r);
     r.addEventListener("input", function () { paintRange(r); });
+  });
+
+  /* ---------- complexity: Good / Strong / Strongest in its own card ---------- */
+  var PROTECT = ["M", "Q", "H"];
+  var PROTECT_NAMES = ["Good", "Strong", "Strongest"];
+  var protectRange = $("protectRange");
+  var protectStops = [].slice.call(document.querySelectorAll(".protect-stops button"));
+  var protectChoice = 0;
+  function showProtect(i) {
+    protectRange.value = i;
+    protectRange.setAttribute("aria-valuetext", PROTECT_NAMES[i]);
+    paintRange(protectRange);
+    protectStops.forEach(function (b, j) { b.classList.toggle("on", j === i); });
+  }
+  function setProtect(i) {
+    if (state.logo) { return; }
+    protectChoice = i;
+    showProtect(i);
+    if (state.ec !== PROTECT[i]) {
+      state.ec = PROTECT[i];
+      render(true, true);
+    }
+  }
+  /* a logo covers part of the QR code, so it pins Strongest until it is removed */
+  function lockProtect(on) {
+    $("protect").classList.toggle("locked", on);
+    protectRange.disabled = on;
+    $("protectNote").hidden = !on;
+    showProtect(on ? 2 : protectChoice);
+    state.ec = on ? "H" : PROTECT[protectChoice];
+  }
+  protectRange.addEventListener("input", function () { setProtect(Number(this.value)); });
+  protectStops.forEach(function (b) {
+    b.addEventListener("click", function () { setProtect(Number(b.dataset.stop)); });
+  });
+
+  var protectTip = $("protectTip"), protectInfo = $("protectInfo");
+  function toggleTip(open) {
+    protectTip.classList.toggle("open", open);
+    protectInfo.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  protectInfo.addEventListener("click", function () {
+    toggleTip(!protectTip.classList.contains("open"));
+  });
+  document.addEventListener("pointerdown", function (e) {
+    if (protectTip.classList.contains("open") && !protectTip.contains(e.target) && e.target !== protectInfo) {
+      toggleTip(false);
+    }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && protectTip.classList.contains("open")) {
+      toggleTip(false);
+      protectInfo.focus();
+    }
   });
 
   /* ---------- hero art card: a real, scannable code ---------- */
@@ -2674,19 +2964,44 @@
   /* ---------- the reveal: studio appears once a link is given ---------- */
   var revealed = false;
   function scrollToStudio() {
+    /* a box still gliding to its new height would throw the scroll target off, so it settles first */
+    clearTimeout(morphTimer);
+    var qt = document.querySelector(".qt");
+    qt.classList.remove("morphing");
+    qt.style.height = "";
     var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     $("studioWrap").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
   }
-  $("heroForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    var v = $("data").value.trim();
+  /* empty submit: the whole hero card shakes, not just the box inside it */
+  function shake(form) {
+    var el = form.closest(".qt") || form;
+    el.classList.remove("shake");
+    void el.offsetWidth;
+    el.classList.add("shake");
+  }
+  /* a submit that can't make a QR code says why, for screen readers, and moves to the field that needs work */
+  function problemFor(form) {
+    if (form.id === "emailForm") { return ["emTo", "Enter an email address, like name@example.com."]; }
+    if (form.id === "contactForm") {
+      if (!$("ctName").value.trim()) { return ["ctName", "Add a name."]; }
+      if (!$("ctTel").value.trim() && !$("ctMail").value.trim()) { return ["ctTel", "Add a phone number or an email."]; }
+      if ($("ctMail").value.trim() && !EMAIL_RE.test($("ctMail").value.trim())) { return ["ctMail", "Check the email address."]; }
+      return ["ctUrl", "Check the website address."];
+    }
+    return ["data", "Paste a link or any text first."];
+  }
+  function clearProblem() { $("qtMsg").textContent = ""; }
+  /* every form ends here: put the payload in the QR code and show the studio */
+  function make(v, form) {
     if (!v) {
-      var f = this;
-      f.classList.remove("shake");
-      void f.offsetWidth;
-      f.classList.add("shake");
+      shake(form);
+      var pr = problemFor(form);
+      $("qtMsg").textContent = "";
+      setTimeout(function () { $("qtMsg").textContent = pr[1]; }, 50);
+      $(pr[0]).focus();
       return;
     }
+    clearProblem();
     state.data = v;
     if (revealed) {
       render(true);
@@ -2697,6 +3012,246 @@
     $("studioWrap").hidden = false;
     render(true);
     scrollToStudio();
+  }
+  $("heroForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    make($("data").value.trim(), this);
+  });
+
+  /* ---------- QR code type: a picker inside the box (Link / Email / Contact) ---------- */
+  var KINDS = {
+    text: { form: "heroForm", label: "Link" },
+    email: { form: "emailForm", label: "Email" },
+    contact: { form: "contactForm", label: "Contact" }
+  };
+  var kindBtn = $("kindBtn"), kindMenu = $("kindMenu");
+  var kindOpts = [].slice.call(kindMenu.querySelectorAll("[role=option]"));
+  var kindMode = "text", kindActive = 0;
+  function kindIndex(m) {
+    for (var i = 0; i < kindOpts.length; i++) { if (kindOpts[i].dataset.mode === m) { return i; } }
+    return 0;
+  }
+  /* the white box grows or shrinks to the new form instead of jumping: measure, swap, then glide between the two heights */
+  var morphTimer = 0;
+  function morphBox(swap) {
+    var qt = kindBtn.closest(".qt");
+    var from = qt.getBoundingClientRect().height;
+    clearTimeout(morphTimer);
+    qt.classList.remove("morphing");
+    qt.style.height = "";
+    swap();
+    var to = qt.getBoundingClientRect().height;
+    if (Math.abs(to - from) < 1 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { return; }
+    qt.style.height = from + "px";
+    void qt.offsetHeight;
+    qt.classList.add("morphing");
+    qt.style.height = to + "px";
+    morphTimer = setTimeout(function () {
+      qt.classList.remove("morphing");
+      qt.style.height = "";
+    }, 280);
+  }
+  function setMode(m, focusField) {
+    kindMode = m;
+    morphBox(function () {
+      Object.keys(KINDS).forEach(function (k) { $(KINDS[k].form).hidden = k !== m; });
+      /* one picker: it moves into whichever form is showing */
+      $(KINDS[m].form).querySelector(".kind-slot").appendChild(kindBtn);
+    });
+    var form = $(KINDS[m].form);
+    kindBtn.querySelector(".kind-lbl").textContent = KINDS[m].label;
+    kindBtn.querySelector(".kind-ic").innerHTML = kindOpts[kindIndex(m)].querySelector("svg").outerHTML;
+    kindOpts.forEach(function (o) { o.setAttribute("aria-selected", o.dataset.mode === m ? "true" : "false"); });
+    clearProblem();
+    /* the studio shows what this type would make right now, never the last type's QR code */
+    if (revealed) {
+      state.data = m === "text" ? $("data").value : m === "email" ? emailPayload() : contactPayload();
+      render();
+    }
+    if (focusField) {
+      var first = form.querySelector("input:not([hidden]), textarea");
+      if (first) { first.focus(); }
+    }
+  }
+  function highlight(i) {
+    kindActive = i;
+    kindOpts.forEach(function (o, j) { o.classList.toggle("active", j === i); });
+    kindBtn.setAttribute("aria-activedescendant", kindOpts[i].id);
+  }
+  /* the menu stays in the page for a moment while it fades out, so "open" is tracked here, not read from hidden */
+  var kindOpen = false, kindTimer = 0;
+  function openKinds() {
+    clearTimeout(kindTimer);
+    kindMenu.classList.remove("closing");
+    kindMenu.hidden = false;
+    var q = kindBtn.closest(".qt").getBoundingClientRect(), r = kindBtn.getBoundingClientRect();
+    /* the hero clips what leaves it, so on a short screen the menu opens upward instead of being cut */
+    var h = kindMenu.offsetHeight, hero = kindBtn.closest(".hs");
+    var floor = Math.min(window.innerHeight, hero ? hero.getBoundingClientRect().bottom : window.innerHeight);
+    var up = r.bottom + 8 + h > floor - 8 && r.top - 8 - h >= 8;
+    kindMenu.classList.toggle("up", up);
+    kindMenu.style.top = (up ? r.top - q.top - 8 - h : r.bottom - q.top + 8) + "px";
+    kindMenu.style.left = (r.left - q.left) + "px";
+    kindOpen = true;
+    kindBtn.setAttribute("aria-expanded", "true");
+    highlight(kindIndex(kindMode));
+  }
+  function closeKinds(refocus, now) {
+    if (kindOpen) {
+      kindOpen = false;
+      clearTimeout(kindTimer);
+      if (now || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        kindMenu.classList.remove("closing");
+        kindMenu.hidden = true;
+      } else {
+        kindMenu.classList.add("closing");
+        kindTimer = setTimeout(function () {
+          kindMenu.hidden = true;
+          kindMenu.classList.remove("closing");
+        }, 120);
+      }
+    }
+    kindBtn.setAttribute("aria-expanded", "false");
+    kindBtn.removeAttribute("aria-activedescendant");
+    if (refocus) { kindBtn.focus(); }
+  }
+  /* phones: the picker shares the row, so narrower screens get a shorter hint instead of a clipped one */
+  var narrowBox = window.matchMedia("(max-width: 399px)"), tinyBox = window.matchMedia("(max-width: 359px)");
+  function fitHint() {
+    $("data").placeholder = tinyBox.matches ? "Paste a link" : narrowBox.matches ? "Paste a link or text" : "Paste a link or any text";
+  }
+  fitHint();
+  narrowBox.addEventListener("change", fitHint);
+  tinyBox.addEventListener("change", fitHint);
+  /* desktop: jump into the first field; phones: no keyboard pop until they tap a field */
+  function chooseKind(i, viaKeyboard) {
+    closeKinds(false, true);
+    setMode(kindOpts[i].dataset.mode, !viaKeyboard && window.matchMedia("(pointer: fine)").matches);
+    if (viaKeyboard) { kindBtn.focus(); }
+  }
+  kindBtn.addEventListener("click", function () {
+    if (kindOpen) { closeKinds(false); } else { openKinds(); }
+  });
+  kindBtn.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!kindOpen) { openKinds(); return; }
+      var d = e.key === "ArrowDown" ? 1 : -1;
+      highlight((kindActive + d + kindOpts.length) % kindOpts.length);
+    } else if (kindOpen && (e.key === "Home" || e.key === "End")) {
+      e.preventDefault();
+      highlight(e.key === "Home" ? 0 : kindOpts.length - 1);
+    } else if (kindOpen && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      chooseKind(kindActive, true);
+    } else if (kindOpen && e.key === "Escape") {
+      e.preventDefault();
+      closeKinds(true);
+    } else if (kindOpen && e.key === "Tab") {
+      closeKinds(false);
+    }
+  });
+  kindOpts.forEach(function (o, i) {
+    o.addEventListener("mousemove", function () { if (kindActive !== i) { highlight(i); } });
+    o.addEventListener("click", function () { chooseKind(i, false); });
+  });
+  document.addEventListener("pointerdown", function (e) {
+    if (kindOpen && !kindMenu.contains(e.target) && !kindBtn.contains(e.target)) { closeKinds(false); }
+  });
+  /* the menu is placed once, when it opens; a turned phone or a resized window would leave it stranded.
+     Width only: a phone's address bar sliding away also fires resize */
+  var kindWidth = window.innerWidth;
+  window.addEventListener("resize", function () {
+    if (window.innerWidth === kindWidth) { return; }
+    kindWidth = window.innerWidth;
+    if (kindOpen) { closeKinds(false); }
+  });
+
+  var EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  /* mailto with a subject and body: scanning opens a ready email on the phone */
+  function emailPayload() {
+    var to = $("emTo").value.trim();
+    if (!EMAIL_RE.test(to)) { return ""; }
+    var sub = $("emSub").value.trim();
+    var body = $("emBody").value.trim().replace(/\r?\n/g, "\r\n");
+    var q = [];
+    if (sub) { q.push("subject=" + encodeURIComponent(sub)); }
+    if (body) { q.push("body=" + encodeURIComponent(body)); }
+    /* the address is part of the link: a ? or # in it must not turn into a query or a fragment */
+    return "mailto:" + to.split("@").map(encodeURIComponent).join("@") + (q.length ? "?" + q.join("&") : "");
+  }
+  /* vCard 3.0: scanning offers "Add contact". Text values escape \ , ; and line breaks */
+  function vtext(v) {
+    return v.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+  }
+  function contactPayload() {
+    var name = $("ctName").value.trim().replace(/\s+/g, " ");
+    var tel = $("ctTel").value.trim();
+    var mail = $("ctMail").value.trim();
+    var org = $("ctOrg").value.trim();
+    var url = $("ctUrl").value.trim();
+    if (!name || !(tel || mail)) { return ""; }
+    if (mail && !EMAIL_RE.test(mail)) { return ""; }
+    if (/\s/.test(url)) { return ""; }
+    /* a vCard website is a full address: "studio.in" becomes "https://studio.in" */
+    if (url && !/^[a-z][a-z0-9+.-]*:/i.test(url)) { url = "https://" + url; }
+    var parts = name.split(" ");
+    var family = parts.length > 1 ? parts.pop() : "";
+    var lines = [
+      "BEGIN:VCARD",
+      "VERSION:3.0",
+      "N:" + vtext(family) + ";" + vtext(parts.join(" ")) + ";;;",
+      "FN:" + vtext(name)
+    ];
+    if (org) { lines.push("ORG:" + vtext(org)); }
+    if (tel) { lines.push("TEL;TYPE=CELL:" + vtext(tel)); }
+    if (mail) { lines.push("EMAIL;TYPE=INTERNET:" + mail); }
+    if (url) { lines.push("URL:" + url); }
+    lines.push("END:VCARD");
+    return lines.join("\r\n");
+  }
+  [["emailForm", emailPayload], ["contactForm", contactPayload]].forEach(function (pair) {
+    var form = $(pair[0]), build = pair[1];
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      make(build(), this);
+    });
+    /* once the studio is open, typing updates the QR code live, like the link box */
+    form.addEventListener("input", function () {
+      clearProblem();
+      if (!revealed || form.hidden) { return; }
+      state.data = build();
+      render();
+    });
+  });
+  /* the phone hint shows the number's shape with its country code, for the visitor's own country.
+     Read from the browser's language setting only, nothing is looked up */
+  var PHONE_SHAPES = {
+    IN: "+91 00000 00000", US: "+1 000 000 0000", CA: "+1 000 000 0000", GB: "+44 0000 000000",
+    IE: "+353 00 000 0000", AU: "+61 000 000 000", NZ: "+64 00 000 0000", DE: "+49 000 00000000",
+    FR: "+33 0 00 00 00 00", ES: "+34 000 00 00 00", IT: "+39 000 000 0000", NL: "+31 0 00000000",
+    BR: "+55 00 00000 0000", MX: "+52 00 0000 0000", JP: "+81 00 0000 0000", SG: "+65 0000 0000",
+    AE: "+971 00 000 0000", ZA: "+27 00 000 0000", PH: "+63 000 000 0000", MY: "+60 00 000 0000",
+    ID: "+62 000 0000 0000", PK: "+92 000 0000000", BD: "+880 0000 000000", LK: "+94 00 000 0000"
+  };
+  (function () {
+    var region = "";
+    try {
+      var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+      for (var i = 0; i < langs.length && !region; i++) {
+        var r = new Intl.Locale(langs[i]).maximize().region;
+        if (PHONE_SHAPES[r]) { region = r; }
+      }
+    } catch { /* older browser: keep the generic shape */ }
+    if (region) { $("ctTel").placeholder = PHONE_SHAPES[region]; }
+  })();
+
+  $("ctMore").addEventListener("click", function () {
+    $("ctOrg").hidden = false;
+    $("ctUrl").hidden = false;
+    this.setAttribute("aria-expanded", "true");
+    this.hidden = true;
+    $("ctOrg").focus();
   });
 })();
 </script>
