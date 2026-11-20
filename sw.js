@@ -1,4 +1,4 @@
-var CACHE_NAME = "ente-qr-static-v1";
+var CACHE_NAME = "ente-qr-static-v2";
 var STATIC_ASSETS = [
   "/index.html",
   "/register-sw.js",
@@ -14,7 +14,15 @@ var STATIC_ASSETS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) =>
     cache.addAll(STATIC_ASSETS.map((path) => new Request(path, { cache: "reload" }))),
-  ));
+  ).then(() => self.skipWaiting()));
+});
+
+// Old caches go as soon as this worker takes over, so an offline fallback can never pair the
+// new page with an old copy of the QR library.
+self.addEventListener("activate", (event) => {
+  event.waitUntil(caches.keys().then((keys) => Promise.all(
+    keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)),
+  )).then(() => self.clients.claim()));
 });
 
 self.addEventListener("fetch", (event) => {

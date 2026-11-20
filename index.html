@@ -228,7 +228,7 @@
   .qt:has(#data:focus) { box-shadow: 0 14px 44px -14px rgba(0, 0, 0, 0.3), 0 0 0 4px rgba(255, 255, 255, 0.45); }
   .qt.morphing { overflow: hidden; transition: height 260ms var(--ease-out), box-shadow 180ms ease; }
   .qt.shake { animation: shake 320ms ease; }
-  .qt-msg { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
+  .qt-msg, #qrStatus { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
   .qt .hs-form { margin-top: 0; }
   .qt #data { padding-left: 124px; }
   .qt-card { position: relative; display: grid; gap: 8px; padding: 10px; text-align: left; }
@@ -1016,6 +1016,7 @@
     background-color: #fff;
     display: none;
   }
+  .check[hidden] { display: none; }
   .check {
     display: flex;
     align-items: center;
@@ -1101,16 +1102,6 @@
   }
   .range-row output { font-family: var(--mono); font-size: 12px; color: var(--text-2); width: 28px; text-align: right; }
 
-  /* ---------- footer ---------- */
-  footer {
-    border-top: 1px solid var(--hairline);
-    margin-top: 88px;
-    padding-top: 24px;
-    text-align: center;
-    font-size: 13px;
-    color: var(--text-2);
-  }
-
   /* ---------- entrance, once ---------- */
   .rise { opacity: 0; transform: translateY(12px); animation: rise 640ms var(--ease-out) forwards; }
   .d2 { animation-delay: 140ms; }
@@ -1120,6 +1111,8 @@
     .rise { transform: none; animation: fade 300ms ease forwards; }
     @keyframes fade { to { opacity: 1; } }
     .pill:active, .gtile:active, .swatch:active, .preset:active .thumbwrap, .minipill:active { transform: none; }
+    /* the share sheet appears in place instead of sliding */
+    .sheet { transition: opacity 200ms ease; }
   }
 
   /* ---------- responsive ---------- */
@@ -1217,7 +1210,7 @@
 </section>
 
 <div class="sheet-back" id="sheetBack"></div>
-<div class="sheet" id="shareSheet" role="dialog" aria-modal="true" aria-label="Share your QR">
+<div class="sheet" id="shareSheet" role="dialog" aria-modal="true" aria-label="Share your QR" inert>
   <div class="sheet-grab"></div>
   <button class="sheet-close" id="sheetClose" type="button" aria-label="Close">
     <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 2l8 8M10 2l-8 8"/></svg>
@@ -1230,6 +1223,9 @@
     <button class="pill" id="storySave" type="button">Save image</button>
   </div>
 </div>
+
+<!-- always in the page, so screen readers hear it even on the first Make -->
+<p id="qrStatus" role="status"></p>
 
 <div id="studioWrap" hidden>
 <div class="wrap">
@@ -1305,10 +1301,10 @@
 
       <div class="card">
         <h2>Colors</h2>
-        <p class="rowlabel">Code</p>
+        <p class="rowlabel">QR code</p>
         <div class="swrow">
-          <div class="swatches" id="swDots" role="radiogroup" aria-label="Code color"></div>
-          <input class="hexfield" type="text" id="hDots" value="#171b19" maxlength="7" aria-label="Code color hex">
+          <div class="swatches" id="swDots" role="radiogroup" aria-label="QR code color"></div>
+          <input class="hexfield" type="text" id="hDots" value="#171b19" maxlength="7" aria-label="QR code color hex">
         </div>
         <p class="rowlabel">Eyes</p>
         <div class="swrow">
@@ -1781,10 +1777,15 @@
   }
 
   var renderTimer = null;
+  /* screen readers hear "QR code ready" after Make, and the too-much-text message when it appears */
+  var readyNote = false, tooLong = false;
   function render(immediate, morph) {
     if (lastPaint && lastGeom === geomSig() && state.data.trim() && mount.querySelector(":scope > svg")) {
       /* tapping the same tile twice must not rebuild anything */
-      if (paintSig() === lastPaint) { return; }
+      if (paintSig() === lastPaint) {
+        if (readyNote) { readyNote = false; $("qrStatus").textContent = "QR code ready."; }
+        return;
+      }
       if (tintTween(lastPaint)) { lastPaint = paintSig(); return; }
       /* gradient presets paint modules with url(#gradient), so there is no
          fill to tween: dissolve rather than flash a rebuild */
@@ -1793,6 +1794,9 @@
     clearTimeout(renderTimer);
     renderTimer = setTimeout(function () {
       if (!state.data.trim()) {
+        readyNote = false;
+        tooLong = false;
+        $("qrStatus").textContent = "";
         mount.innerHTML = kindMode === "text"
           ? '<p class="empty">Add a link or any text above to make your QR code.</p>'
           : '<p class="empty">Fill in the details above to make your QR code.</p>';
@@ -1805,11 +1809,18 @@
         qr.append(temp);
       } catch {
         /* code length overflow: too many bytes for one QR */
-        mount.innerHTML = state.ec === "M" || state.logo
-          ? '<p class="empty">Too much text for one QR code. Shorten it.</p>'
-          : '<p class="empty">Too much text for one QR code. Shorten it, or set Complexity to Good.</p>';
+        var tooMuch = state.ec === "M" || state.logo
+          ? "Too much text for one QR code. Shorten it."
+          : "Too much text for one QR code. Shorten it, or set Complexity to Good.";
+        mount.innerHTML = '<p class="empty">' + tooMuch + "</p>";
+        readyNote = false;
+        tooLong = true;
+        $("qrStatus").textContent = tooMuch;
         return;
       }
+      if (readyNote) { readyNote = false; $("qrStatus").textContent = "QR code ready."; }
+      else if (tooLong) { $("qrStatus").textContent = ""; }
+      tooLong = false;
       var qrSvg = temp.querySelector("svg");
       if (!qrSvg) { mount.innerHTML = ""; return; }
       /* scale with the tile on small screens */
@@ -1818,6 +1829,8 @@
       }
       sealSeams(qrSvg);
       var root = composeFrame(qrSvg, 1);
+      root.setAttribute("role", "img");
+      root.setAttribute("aria-label", "Your QR code");
       var old = mount.querySelector(":scope > svg:not(.mout)");
       if (morph && old && !window.matchMedia("(prefers-reduced-motion: reduce)").matches && !document.hidden) {
         radialSwap(old, root);
@@ -2098,7 +2111,7 @@
     wheel.setAttribute("aria-label", "Custom " + key + " color");
     wheel.addEventListener("click", function (e) {
       e.stopPropagation();
-      openPicker(key, wheel);
+      openPicker(key, wheel, e.detail === 0);
     });
     host.parentNode.insertBefore(wheel, host.nextSibling);
 
@@ -2180,6 +2193,8 @@
     if (pk.el) { return; }
     var el = document.createElement("div");
     el.className = "picker";
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-label", "Custom color");
     el.innerHTML = '<div class="pk-sv"><span class="pk-dot"></span></div>' +
       '<div class="pk-hue"><span class="pk-hthumb"></span></div>' +
       '<div class="pk-row">' +
@@ -2231,13 +2246,18 @@
       if (pk.el.classList.contains("open") && !pk.el.contains(e.target)) { closePicker(); }
     });
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") { closePicker(); }
+      if (e.key === "Escape" && pk.el.classList.contains("open")) {
+        /* Escape from inside the picker hands focus back to the wheel that opened it */
+        var inside = pk.el.contains(document.activeElement);
+        closePicker();
+        if (inside && pk.opener) { pk.opener.focus(); }
+      }
     });
   }
   function closePicker() {
     if (pk.el) { pk.el.classList.remove("open"); pk.key = null; }
   }
-  function openPicker(key, anchor) {
+  function openPicker(key, anchor, fromKeyboard) {
     buildPicker();
     if (pk.el.classList.contains("open") && pk.key === key) { closePicker(); return; }
     pk.key = null; /* seed silently first */
@@ -2257,6 +2277,9 @@
     if (y < window.scrollY + 8) { y = window.scrollY + 8; }
     pk.el.style.left = x + "px";
     pk.el.style.top = y + "px";
+    pk.opener = anchor;
+    /* keyboard users land in the hex field; a tap does not pop up the phone keyboard */
+    if (fromKeyboard) { pk.hex.focus(); }
   }
 
   /* ---------- data ---------- */
@@ -2345,6 +2368,8 @@
     reader.readAsDataURL(file);
   });
   $("logoClear").addEventListener("click", function () {
+    /* this button hides itself, so keyboard focus moves to Add logo */
+    if (document.activeElement === this) { $("logoBtn").focus(); }
     state.logo = null;
     state.logoImg = null;
     $("logoFile").value = "";
@@ -2903,39 +2928,64 @@
   var sheetOpen = false;
   var storyTimer = null;
   var storyCanvas = null;
+  var storyBuild = 0;
   function refreshStory(now) {
     clearTimeout(storyTimer);
     function build() {
-      makeStory($("storyCaption").value).then(function (c) {
+      /* only the newest build may land; a QR code that fails to build (too much text) closes the sheet */
+      var id = ++storyBuild;
+      Promise.resolve().then(function () {
+        return makeStory($("storyCaption").value);
+      }).then(function (c) {
+        if (id !== storyBuild || !sheetOpen) { return; }
         storyCanvas = c;
         $("storyPreview").src = c.toDataURL("image/png");
       }).catch(function () {
-        closeSheet();
+        if (id === storyBuild) { closeSheet(); }
       });
     }
     if (now) { build(); } else { storyTimer = setTimeout(build, 120); }
   }
   function openSheet() {
     if (!state.data.trim()) { return; }
+    /* too much text for one QR code: nothing to share, the preview already says so */
+    try { new QRCodeStyling(buildOptions(PREVIEW, "svg")); } catch { return; }
+    /* never save or share the card of an earlier QR code */
+    storyCanvas = null;
     sheetOpen = true;
     $("storyPreview").classList.remove("ready");
     $("sheetBack").classList.add("open");
     $("shareSheet").classList.add("open");
+    $("shareSheet").inert = false;
+    $("sheetClose").focus();
     refreshStory(true);
   }
   $("storyPreview").addEventListener("load", function () {
     $("storyPreview").classList.add("ready");
   });
+  /* a closed sheet is out of reach for Tab and screen readers; focus goes back to the Share button */
   function closeSheet() {
+    var hadFocus = $("shareSheet").contains(document.activeElement);
     sheetOpen = false;
     $("sheetBack").classList.remove("open");
     $("shareSheet").classList.remove("open");
+    $("shareSheet").inert = true;
+    if (hadFocus) { $("shareBtn").focus(); }
   }
   $("shareBtn").addEventListener("click", openSheet);
   $("sheetBack").addEventListener("click", closeSheet);
   $("sheetClose").addEventListener("click", closeSheet);
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && sheetOpen) { closeSheet(); }
+    /* while the sheet is open, Tab cycles inside it */
+    if (e.key === "Tab" && sheetOpen) {
+      var f = [].slice.call($("shareSheet").querySelectorAll("button, input")).filter(function (el) { return !el.hidden && el.offsetParent !== null; });
+      if (!f.length) { return; }
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      else if (!$("shareSheet").contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    }
   });
   $("storyCaption").addEventListener("input", refreshStory);
   function storyBlob() {
@@ -3003,6 +3053,8 @@
     }
     clearProblem();
     state.data = v;
+    $("qrStatus").textContent = "";
+    readyNote = true;
     if (revealed) {
       render(true);
       scrollToStudio();
