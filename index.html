@@ -697,6 +697,7 @@
     display: grid;
     place-items: center;
     box-shadow: var(--shadow-tile);
+    transition: background-color 260ms var(--ease-out);
     transform: perspective(1100px) rotateX(var(--tx, 0deg)) rotateY(var(--ty, 0deg));
   }
   #qr { width: 82%; position: relative; }
@@ -1113,6 +1114,7 @@
     .pill:active, .gtile:active, .swatch:active, .preset:active .thumbwrap, .minipill:active { transform: none; }
     /* the share sheet appears in place instead of sliding */
     .sheet { transition: opacity 200ms ease; }
+    .tile { transition: none; }
   }
 
   /* ---------- responsive ---------- */
@@ -1551,13 +1553,26 @@
 
   /* adjacent modules leave AA hairlines; a self-colored half-pixel stroke seals them */
   function sealSeams(svg) {
-    if (state.dotsGradient) { return; }
-    var bg = (state.bg || "").toLowerCase();
-    svg.querySelectorAll("rect, path, circle").forEach(function (el) {
-      var f = (el.getAttribute("fill") || "").toLowerCase();
-      if (!f || f === "none" || f === bg) { return; }
-      el.setAttribute("stroke", f);
-      el.setAttribute("stroke-width", "0.6");
+    /* the library paints modules through clip paths, and touching clip shapes leave
+       hairline seams between modules: draw the shapes directly instead, in a group
+       whose thin stroke of the same colour closes the gaps. The stroke stays a sliver
+       of one module, so tiny dense QR codes keep their gaps */
+    var probe = svg.querySelector("[id='clip-path-dot-color'] circle, [id='clip-path-dot-color'] rect");
+    var dot = probe ? (probe.tagName === "circle" ? 2 * probe.getAttribute("r") : Math.min(probe.getAttribute("width"), probe.getAttribute("height"))) : 0;
+    var sw = dot > 0 ? Math.min(0.6, dot * 0.1) : 0.3;
+    [].slice.call(svg.querySelectorAll("rect[clip-path]")).forEach(function (rect) {
+      var m = /#([\w-]+)/.exec(rect.getAttribute("clip-path"));
+      var cp = m && m[1].indexOf("background") === -1 && svg.getElementById(m[1]);
+      if (!cp) { return; }
+      var fill = rect.getAttribute("fill");
+      var g = svgNode("g", { fill: fill, stroke: fill, "stroke-width": sw, "data-cp": m[1] });
+      while (cp.firstChild) {
+        var el = cp.firstChild;
+        if (el.nodeType === 1 && el.getAttribute("clip-rule")) { el.setAttribute("fill-rule", el.getAttribute("clip-rule")); }
+        g.appendChild(el);
+      }
+      rect.replaceWith(g);
+      cp.remove();
     });
   }
 
@@ -1586,7 +1601,7 @@
     /* role comes from the clip reference, so Ink (code and eyes both black)
        still tweens instead of falling back to a rebuild */
     function roleOf(el) {
-      var cp = el.getAttribute("clip-path") || "";
+      var cp = el.getAttribute("clip-path") || el.getAttribute("data-cp") || "";
       if (cp.indexOf("background-color") !== -1) { return 2; }
       if (cp.indexOf("corners-dot-color") !== -1) { return 1; }
       if (cp.indexOf("corners-square-color") !== -1) { return 0; }
@@ -1596,7 +1611,7 @@
     var quiet = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var ease = "260ms cubic-bezier(0.23, 1, 0.32, 1)";
     var touched = false;
-    svg.querySelectorAll("rect, path, circle, ellipse, polygon, text").forEach(function (el) {
+    svg.querySelectorAll("g[data-cp], rect, path, circle, ellipse, polygon, text").forEach(function (el) {
       var fill = (el.getAttribute("fill") || "").toUpperCase();
       var line = (el.getAttribute("stroke") || "").toUpperCase();
       var role = roleOf(el);
@@ -1780,6 +1795,8 @@
   /* screen readers hear "QR code ready" after Make, and the too-much-text message when it appears */
   var readyNote = false, tooLong = false;
   function render(immediate, morph) {
+    /* the whole tile wears the background colour, not just the square under the QR code */
+    document.querySelector(".tile").style.backgroundColor = state.bg;
     if (lastPaint && lastGeom === geomSig() && state.data.trim() && mount.querySelector(":scope > svg")) {
       /* tapping the same tile twice must not rebuild anything */
       if (paintSig() === lastPaint) {
@@ -2455,12 +2472,12 @@
   }
 
   /* ---------- export: everything goes through the composed SVG ---------- */
-  function tileWrap(qrSvg, size) {
+  function tileWrap(qrSvg, size, bg) {
     var TILE = size / 0.82;
     var r = TILE * 0.074;
     var off = (TILE - size) / 2;
     var wrap = svgNode("svg", { xmlns: SVGNS, viewBox: "0 0 " + TILE + " " + TILE, width: TILE, height: TILE });
-    wrap.appendChild(svgNode("rect", { x: 0, y: 0, width: TILE, height: TILE, rx: r, fill: "#FFFFFF" }));
+    wrap.appendChild(svgNode("rect", { x: 0, y: 0, width: TILE, height: TILE, rx: r, fill: bg }));
     positionQR(qrSvg, off, off, size);
     wrap.appendChild(qrSvg);
     wrap.__w = TILE;
@@ -2479,7 +2496,7 @@
         qrSvg.setAttribute("viewBox", "0 0 " + size + " " + size);
       }
       sealSeams(qrSvg);
-      var root = snap.frame === "none" ? tileWrap(qrSvg, size) : composeFrame(qrSvg, k, snap);
+      var root = snap.frame === "none" ? tileWrap(qrSvg, size, snap.bg) : composeFrame(qrSvg, k, snap);
       var needFont = snap.frame !== "none" && (snap.label || "").trim() !== "";
       if (needFont) {
         var st = document.createElementNS(SVGNS, "style");
@@ -2716,7 +2733,7 @@
       tile.style.setProperty("--tx", (-py * 6).toFixed(2) + "deg");
     }
     tile.addEventListener("pointerenter", function () {
-      tile.style.transition = "transform 140ms linear";
+      tile.style.transition = "transform 140ms linear, background-color 260ms var(--ease-out)";
     });
     tile.addEventListener("pointermove", function (e) {
       var r = tile.getBoundingClientRect();
@@ -2725,7 +2742,7 @@
       if (!raf) { raf = requestAnimationFrame(apply); }
     });
     tile.addEventListener("pointerleave", function () {
-      tile.style.transition = "transform 550ms var(--ease-out)";
+      tile.style.transition = "transform 550ms var(--ease-out), background-color 260ms var(--ease-out)";
       tile.style.setProperty("--tx", "0deg");
       tile.style.setProperty("--ty", "0deg");
     });
@@ -3227,14 +3244,39 @@
     var sub = $("emSub").value.trim();
     var body = $("emBody").value.trim().replace(/\r?\n/g, "\r\n");
     var q = [];
-    if (sub) { q.push("subject=" + encodeURIComponent(sub)); }
-    if (body) { q.push("body=" + encodeURIComponent(body)); }
+    if (sub) { q.push("subject=" + qtext(sub)); }
+    if (body) { q.push("body=" + qtext(body)); }
     /* the address is part of the link: a ? or # in it must not turn into a query or a fragment */
-    return "mailto:" + to.split("@").map(encodeURIComponent).join("@") + (q.length ? "?" + q.join("&") : "");
+    var link = "mailto:" + to.split("@").map(encodeURIComponent).join("@") + (q.length ? "?" + q.join("&") : "");
+    /* a link spends three characters on every space; the short email format (MATMSG) keeps
+       subject and message as they are. Every phone opens the link, so the short format is
+       used only when it really makes the QR code smaller */
+    if (!sub && !body) { return link; }
+    var msg = "MATMSG:TO:" + mtext(to) + ";" + (sub ? "SUB:" + mtext(sub) + ";" : "") + (body ? "BODY:" + mtext(body) + ";" : "") + ";";
+    return qrSize(msg) < qrSize(link) ? msg : link;
+  }
+  /* bytes each QR code size holds at Good / Strong / Strongest; past these, longer is bigger */
+  var QR_BYTES = {
+    M: [14, 26, 42, 62, 84, 106, 122, 152, 180, 213],
+    Q: [11, 20, 32, 46, 60, 74, 86, 108, 130, 151],
+    H: [7, 14, 24, 34, 44, 58, 64, 84, 98, 119]
+  };
+  function qrSize(text) {
+    var n = new Blob([text]).size, caps = QR_BYTES[state.ec] || QR_BYTES.M;
+    for (var i = 0; i < caps.length; i++) { if (n <= caps[i]) { return i; } }
+    return caps.length + n;
+  }
+  /* mailto values keep , : ; @ and $ as they are (RFC 6068), everything else is percent-encoded */
+  function qtext(v) {
+    return encodeURIComponent(v).replace(/%(2C|3A|3B|40|24)/g, function (m) { return decodeURIComponent(m); });
   }
   /* vCard 3.0: scanning offers "Add contact". Text values escape \ , ; and line breaks */
   function vtext(v) {
     return v.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+  }
+  /* MECARD escapes \ ; , : and " with a backslash */
+  function mtext(v) {
+    return v.replace(/([\\;,:"])/g, "\\$1");
   }
   function contactPayload() {
     var name = $("ctName").value.trim().replace(/\s+/g, " ");
@@ -3247,17 +3289,25 @@
     if (/\s/.test(url)) { return ""; }
     /* a vCard website is a full address: "studio.in" becomes "https://studio.in" */
     if (url && !/^[a-z][a-z0-9+.-]*:/i.test(url)) { url = "https://" + url; }
+    /* name, phone and email go in the short contact format (MECARD): the same details in far
+       fewer dots. Company and website keep the full vCard, which every phone reads */
+    if (!org && !url) {
+      var me = "MECARD:N:" + mtext(name) + ";";
+      if (tel) { me += "TEL:" + mtext(tel.replace(/[\s().-]/g, "")) + ";"; }
+      if (mail) { me += "EMAIL:" + mtext(mail) + ";"; }
+      return me + ";";
+    }
     var parts = name.split(" ");
     var family = parts.length > 1 ? parts.pop() : "";
     var lines = [
       "BEGIN:VCARD",
       "VERSION:3.0",
-      "N:" + vtext(family) + ";" + vtext(parts.join(" ")) + ";;;",
+      "N:" + vtext(family) + ";" + vtext(parts.join(" ")),
       "FN:" + vtext(name)
     ];
     if (org) { lines.push("ORG:" + vtext(org)); }
-    if (tel) { lines.push("TEL;TYPE=CELL:" + vtext(tel)); }
-    if (mail) { lines.push("EMAIL;TYPE=INTERNET:" + mail); }
+    if (tel) { lines.push("TEL:" + vtext(tel)); }
+    if (mail) { lines.push("EMAIL:" + mail); }
     if (url) { lines.push("URL:" + url); }
     lines.push("END:VCARD");
     return lines.join("\r\n");
